@@ -11,5 +11,4 @@ struct transaction {
 	float Amount;
 	string TransDate;
 };
-
 #endif
