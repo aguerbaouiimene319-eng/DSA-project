@@ -14,6 +14,16 @@ void customerMenu(BankSystem* system, Account* account);
 void employeeMenu(BankSystem* system);
 void clearScreen();
 void pause();
+void autosave(BankSystem* system);
+
+// New file handling functions
+void loadLoanRequests(BankSystem* system);
+void saveLoanRequests(BankSystem* system);
+void loadCompletedLoans(BankSystem* system);
+void saveCompletedLoans(BankSystem* system);
+void loadSystemState(BankSystem* system);
+void saveSystemState(BankSystem* system);
+void saveTransactionLog(const string& accountNumber, const Transaction& trans);
 
 int main() {
     BankSystem system;
@@ -34,6 +44,14 @@ int main() {
         destroyTransactionStack(&system.accounts[i].dailyTransactions);
     }
 
+    // Cleanup completed loans
+    LoanNode* current = system.completedLoans;
+    while (current != nullptr) {
+        LoanNode* temp = current;
+        current = current->next;
+        delete temp;
+    }
+
     cout << "\nThank you for using the Banking System!\n";
     return 0;
 }
@@ -51,7 +69,6 @@ void loadDataFromFiles(BankSystem* system) {
     // ====================== LOAD EMPLOYEES ======================
     ifstream empFile("employees.txt");
     if (empFile.is_open()) {
-        // Check if file is empty
         empFile.seekg(0, ios::end);
         if (empFile.tellg() == 0) {
             cout << "employees.txt is empty — starting with 0 employees.\n";
@@ -97,84 +114,81 @@ void loadDataFromFiles(BankSystem* system) {
     if (!accFile.is_open()) {
         cout << "accounts.txt missing — starting with an empty database.\n";
         system->accountCount = 0;
-        return;
     }
-
-    // Checking if file is empty
-    accFile.seekg(0, ios::end);
-    if (accFile.tellg() == 0) {
-        cout << "accounts.txt is empty — starting with 0 accounts.\n";
-        system->accountCount = 0;
-        accFile.close();
-        return;
-    }
-    accFile.seekg(0, ios::beg);
-
-    // Reading number of accounts
-    accFile >> system->accountCount;
-    if (!accFile.good() || system->accountCount < 0) {
-        cout << "Error: accounts.txt is corrupted — resetting database.\n";
-        system->accountCount = 0;
-        accFile.close();
-        return;
-    }
-    accFile.ignore();
-
-    // Loading each account
-    for (int i = 0; i < system->accountCount; i++) {
-        getline(accFile, system->accounts[i].accountNumber);
-        getline(accFile, system->accounts[i].accountType);
-        getline(accFile, system->accounts[i].iban);
-        getline(accFile, system->accounts[i].branchCode);
-        getline(accFile, system->accounts[i].holderName);
-
-        accFile >> system->accounts[i].openingDate.day
-            >> system->accounts[i].openingDate.month
-            >> system->accounts[i].openingDate.year;
-        accFile.ignore();
-
-        getline(accFile, system->accounts[i].status);
-
-        accFile >> system->accounts[i].balance;
-        accFile.ignore();
-
-        getline(accFile, system->accounts[i].password);
-
-        // Initialize loan list & transaction stack
-        system->accounts[i].loans = createLoanList();
-        system->accounts[i].dailyTransactions = createTransactionStack();
-
-        // ====== LOAD LOANS FOR THIS ACCOUNT ======
-        int loanCount;
-        accFile >> loanCount;
-        accFile.ignore();
-
-        if (loanCount < 0) {
-            cout << "Warning: corrupted loan count — skipping loans for account "
-                << system->accounts[i].accountNumber << "\n";
-            loanCount = 0;
+    else {
+        accFile.seekg(0, ios::end);
+        if (accFile.tellg() == 0) {
+            cout << "accounts.txt is empty — starting with 0 accounts.\n";
+            system->accountCount = 0;
+            accFile.close();
         }
+        else {
+            accFile.seekg(0, ios::beg);
 
-        for (int j = 0; j < loanCount; j++) {
-            Loan loan;
-            getline(accFile, loan.loanId);
-            getline(accFile, loan.loanType);
+            accFile >> system->accountCount;
+            if (!accFile.good() || system->accountCount < 0) {
+                cout << "Error: accounts.txt is corrupted — resetting database.\n";
+                system->accountCount = 0;
+                accFile.close();
+            }
+            else {
+                accFile.ignore();
 
-            accFile >> loan.principalAmount >> loan.interestRate
-                >> loan.amountPaid >> loan.remainingBalance;
+                for (int i = 0; i < system->accountCount; i++) {
+                    getline(accFile, system->accounts[i].accountNumber);
+                    getline(accFile, system->accounts[i].accountType);
+                    getline(accFile, system->accounts[i].iban);
+                    getline(accFile, system->accounts[i].branchCode);
+                    getline(accFile, system->accounts[i].holderName);
 
-            accFile >> loan.startDate.day >> loan.startDate.month >> loan.startDate.year;
-            accFile >> loan.endDate.day >> loan.endDate.month >> loan.endDate.year;
+                    accFile >> system->accounts[i].openingDate.day
+                        >> system->accounts[i].openingDate.month
+                        >> system->accounts[i].openingDate.year;
+                    accFile.ignore();
 
-            accFile.ignore();
-            getline(accFile, loan.status);
+                    getline(accFile, system->accounts[i].status);
 
-            addLoan(&system->accounts[i].loans, loan);
+                    accFile >> system->accounts[i].balance;
+                    accFile.ignore();
+
+                    getline(accFile, system->accounts[i].password);
+
+                    system->accounts[i].loans = createLoanList();
+                    system->accounts[i].dailyTransactions = createTransactionStack();
+
+                    int loanCount;
+                    accFile >> loanCount;
+                    accFile.ignore();
+
+                    if (loanCount < 0) {
+                        cout << "Warning: corrupted loan count — skipping loans for account "
+                            << system->accounts[i].accountNumber << "\n";
+                        loanCount = 0;
+                    }
+
+                    for (int j = 0; j < loanCount; j++) {
+                        Loan loan;
+                        getline(accFile, loan.loanId);
+                        getline(accFile, loan.loanType);
+
+                        accFile >> loan.principalAmount >> loan.interestRate
+                            >> loan.amountPaid >> loan.remainingBalance;
+
+                        accFile >> loan.startDate.day >> loan.startDate.month >> loan.startDate.year;
+                        accFile >> loan.endDate.day >> loan.endDate.month >> loan.endDate.year;
+
+                        accFile.ignore();
+                        getline(accFile, loan.status);
+
+                        addLoan(&system->accounts[i].loans, loan);
+                    }
+                }
+
+                accFile.close();
+                cout << "Loaded " << system->accountCount << " accounts successfully.\n";
+            }
         }
     }
-
-    accFile.close();
-    cout << "Loaded " << system->accountCount << " accounts successfully.\n";
 
     // ====================== LOAD ARCHIVED ACCOUNTS ======================
     ifstream archFile("archived_accounts.txt");
@@ -214,9 +228,17 @@ void loadDataFromFiles(BankSystem* system) {
         }
     }
     else {
-        cout << "No archived accounts file found.\n";
         system->archivedCount = 0;
     }
+
+    // ====================== LOAD LOAN REQUESTS ======================
+    loadLoanRequests(system);
+
+    // ====================== LOAD COMPLETED LOANS ======================
+    loadCompletedLoans(system);
+
+    // ====================== LOAD SYSTEM STATE ======================
+    loadSystemState(system);
 }
 
 void saveDataToFiles(BankSystem* system) {
@@ -261,7 +283,6 @@ void saveDataToFiles(BankSystem* system) {
             accFile << system->accounts[i].balance << "\n";
             accFile << system->accounts[i].password << "\n";
 
-            // Save loans
             accFile << system->accounts[i].loans.size << "\n";
             LoanNode* current = system->accounts[i].loans.head;
             while (current != nullptr) {
@@ -309,6 +330,244 @@ void saveDataToFiles(BankSystem* system) {
         archFile.close();
         cout << "Saved " << system->archivedCount << " archived accounts.\n";
     }
+
+    // ====================== SAVE LOAN REQUESTS ======================
+    saveLoanRequests(system);
+
+    // ====================== SAVE COMPLETED LOANS ======================
+    saveCompletedLoans(system);
+
+    // ====================== SAVE SYSTEM STATE ======================
+    saveSystemState(system);
+}
+
+// ====================== LOAN REQUESTS FILE HANDLING ======================
+void loadLoanRequests(BankSystem* system) {
+    ifstream lrFile("loan_requests.txt");
+    if (!lrFile.is_open()) {
+        cout << "No pending loan requests found.\n";
+        return;
+    }
+
+    lrFile.seekg(0, ios::end);
+    if (lrFile.tellg() == 0) {
+        cout << "No pending loan requests.\n";
+        lrFile.close();
+        return;
+    }
+    lrFile.seekg(0, ios::beg);
+
+    int requestCount;
+    lrFile >> requestCount;
+    if (!lrFile.good() || requestCount < 0) {
+        cout << "Error: loan_requests.txt corrupted.\n";
+        lrFile.close();
+        return;
+    }
+    lrFile.ignore();
+
+    for (int i = 0; i < requestCount; i++) {
+        LoanRequest request;
+        getline(lrFile, request.accountNumber);
+        getline(lrFile, request.loanType);
+        lrFile >> request.requestedAmount >> request.interestRate;
+        lrFile >> request.requestDate.day >> request.requestDate.month >> request.requestDate.year;
+        lrFile.ignore();
+        getline(lrFile, request.status);
+
+        enqueueLoanRequest(&system->loanRequests, request);
+    }
+
+    lrFile.close();
+    cout << "Loaded " << requestCount << " pending loan requests.\n";
+}
+
+void saveLoanRequests(BankSystem* system) {
+    ofstream lrFile("loan_requests.txt");
+    if (!lrFile.is_open()) {
+        cout << "Error: Could not save loan_requests.txt\n";
+        return;
+    }
+
+    // Count requests in queue
+    int count = 0;
+    QueueNode* temp = system->loanRequests.front;
+    while (temp != nullptr) {
+        count++;
+        temp = temp->next;
+    }
+
+    lrFile << count << "\n";
+
+    // Save each request
+    temp = system->loanRequests.front;
+    while (temp != nullptr) {
+        lrFile << temp->data.accountNumber << "\n";
+        lrFile << temp->data.loanType << "\n";
+        lrFile << temp->data.requestedAmount << " " << temp->data.interestRate << "\n";
+        lrFile << temp->data.requestDate.day << " "
+            << temp->data.requestDate.month << " "
+            << temp->data.requestDate.year << "\n";
+        lrFile << temp->data.status << "\n";
+
+        temp = temp->next;
+    }
+
+    lrFile.close();
+    cout << "Saved " << count << " pending loan requests.\n";
+}
+
+// ====================== COMPLETED LOANS FILE HANDLING ======================
+void loadCompletedLoans(BankSystem* system) {
+    ifstream clFile("completed_loans.txt");
+    if (!clFile.is_open()) {
+        cout << "No completed loans history found.\n";
+        return;
+    }
+
+    clFile.seekg(0, ios::end);
+    if (clFile.tellg() == 0) {
+        cout << "No completed loans.\n";
+        clFile.close();
+        return;
+    }
+    clFile.seekg(0, ios::beg);
+
+    int loanCount;
+    clFile >> loanCount;
+    if (!clFile.good() || loanCount < 0) {
+        cout << "Error: completed_loans.txt corrupted.\n";
+        clFile.close();
+        return;
+    }
+    clFile.ignore();
+
+    for (int i = 0; i < loanCount; i++) {
+        Loan loan;
+        getline(clFile, loan.loanId);
+        getline(clFile, loan.loanType);
+
+        clFile >> loan.principalAmount >> loan.interestRate
+            >> loan.amountPaid >> loan.remainingBalance;
+
+        clFile >> loan.startDate.day >> loan.startDate.month >> loan.startDate.year;
+        clFile >> loan.endDate.day >> loan.endDate.month >> loan.endDate.year;
+
+        clFile.ignore();
+        getline(clFile, loan.status);
+
+        // Add to completed loans list
+        LoanNode* newNode = new LoanNode;
+        newNode->data = loan;
+        newNode->next = system->completedLoans;
+        system->completedLoans = newNode;
+    }
+
+    clFile.close();
+    cout << "Loaded " << loanCount << " completed loans.\n";
+}
+
+void saveCompletedLoans(BankSystem* system) {
+    ofstream clFile("completed_loans.txt");
+    if (!clFile.is_open()) {
+        cout << "Error: Could not save completed_loans.txt\n";
+        return;
+    }
+
+    // Count completed loans
+    int count = 0;
+    LoanNode* temp = system->completedLoans;
+    while (temp != nullptr) {
+        count++;
+        temp = temp->next;
+    }
+
+    clFile << count << "\n";
+
+    // Save each completed loan
+    temp = system->completedLoans;
+    while (temp != nullptr) {
+        clFile << temp->data.loanId << "\n";
+        clFile << temp->data.loanType << "\n";
+        clFile << temp->data.principalAmount << " "
+            << temp->data.interestRate << " "
+            << temp->data.amountPaid << " "
+            << temp->data.remainingBalance << "\n";
+        clFile << temp->data.startDate.day << " "
+            << temp->data.startDate.month << " "
+            << temp->data.startDate.year << "\n";
+        clFile << temp->data.endDate.day << " "
+            << temp->data.endDate.month << " "
+            << temp->data.endDate.year << "\n";
+        clFile << temp->data.status << "\n";
+
+        temp = temp->next;
+    }
+
+    clFile.close();
+    cout << "Saved " << count << " completed loans.\n";
+}
+
+// ====================== SYSTEM STATE FILE HANDLING ======================
+void loadSystemState(BankSystem* system) {
+    ifstream stateFile("system_state.txt");
+    if (!stateFile.is_open()) {
+        cout << "No system state found — day not finalized.\n";
+        system->dayFinalized = false;
+        return;
+    }
+
+    stateFile.seekg(0, ios::end);
+    if (stateFile.tellg() == 0) {
+        system->dayFinalized = false;
+        stateFile.close();
+        return;
+    }
+    stateFile.seekg(0, ios::beg);
+
+    int finalized;
+    stateFile >> finalized;
+    system->dayFinalized = (finalized == 1);
+
+    stateFile.close();
+    cout << "System state loaded. Day finalized: " << (system->dayFinalized ? "Yes" : "No") << "\n";
+}
+
+void saveSystemState(BankSystem* system) {
+    ofstream stateFile("system_state.txt");
+    if (!stateFile.is_open()) {
+        cout << "Error: Could not save system_state.txt\n";
+        return;
+    }
+
+    stateFile << (system->dayFinalized ? 1 : 0) << "\n";
+
+    stateFile.close();
+    cout << "System state saved.\n";
+}
+
+// ====================== TRANSACTION LOG ======================
+void saveTransactionLog(const string& accountNumber, const Transaction& trans) {
+    ofstream logFile("transaction_history.txt", ios::app); // Append mode
+    if (!logFile.is_open()) {
+        cout << "Warning: Could not log transaction.\n";
+        return;
+    }
+
+    logFile << "=== TRANSACTION LOG ===\n";
+    logFile << "Account: " << accountNumber << "\n";
+    logFile << "Type: " << trans.type << "\n";
+    logFile << "Amount: " << fixed << setprecision(3) << trans.amount << " TND\n";
+    logFile << "Date: " << trans.date.day << "/"
+        << trans.date.month << "/"
+        << trans.date.year << "\n";
+    logFile << "Time: " << trans.time.hour << ":"
+        << trans.time.minute << ":"
+        << trans.time.second << "\n";
+    logFile << "Description: " << trans.description << "\n";
+    logFile << "========================\n\n";
+
+    logFile.close();
 }
 
 void mainMenu(BankSystem* system) {
@@ -486,6 +745,11 @@ void pause() {
     cout << "\nPress Enter to continue...";
     cin.ignore();
     cin.get();
+}
+}
+void autoSave(BankSystem* system) {
+    cout << "\n[Auto-saving...]\n";
+    saveDataToFiles(system);
 }
 
 
