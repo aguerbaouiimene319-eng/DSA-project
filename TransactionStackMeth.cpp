@@ -1,125 +1,109 @@
-
 #include "TransactionStackMeth.h"
-#include<iostream>
-#include<string>
+#include <iostream>
 using namespace std;
 
-Nodetrans* CreateNodetrans(transaction data) {
-	Nodetrans* n = new (nothrow) Nodetrans{data};
-	if (!n) {
-		cout << "\nMemory allocation failed\n";
-	}
-	return n;
+Nodetrans* CreateNodetrans(const transaction& data) {
+    Nodetrans* n = new (nothrow) Nodetrans(data);
+    if (!n) cout << "\nMemory allocation failed\n";
+    return n;
 }
-void destroyNode(Nodetrans* n) {
-	delete n;
+
+void destroyTransNode(Nodetrans* n) {
+    delete n;
 }
+
 stack* createStack() {
-	stack* newstack = new (nothrow) stack{};
-	if (!newstack) {
-		cout << "\nMemmory allocation failed\n";
-	}
-	else {
-		newstack->top = nullptr;
-	}
-	return newstack;
+    stack* s = new (nothrow) stack();
+    if (!s) cout << "\nMemory allocation failed\n";
+    return s;
 }
+
 void destroyStack(stack* s) {
-	if (!s) return;
-	delete s;
+    if (!s) return;
+    Nodetrans* curr = s->top;
+    while (curr) {
+        Nodetrans* next = curr->next;
+        destroyTransNode(curr);
+        curr = next;
+    }
+    delete s;
 }
 
 bool isEmptyTransaction(const stack& s) {
-	return (s.top == nullptr);
-}
-bool isFull(const stack& s) {
-	stack* newStack = createStack();
-	if (!newStack) return true;
-	else {
-		destroyStack(newStack);
-	}
-}
-int stackSize(const stack& s) {
-	int size = 0;
-	Nodetrans* n = s.top;
-	while (n) {
-		size++;
-		n = n->next;
-	}
-	return size;
-}
-void displaystack(const stack& s) {
-	if (isEmptyTransaction(s))return;
-	Nodetrans* n = s.top;
-	while (n != nullptr) {
-		cout <<"stack id is "<< n->data.AccountNum << " ";
-		n=n->next;
-	}
-	cout << endl;
+    return (s.top == nullptr);
 }
 
-int push(stack* s, transaction data) {
-	if (isFull(*s)) {
-		cout << "can not add to the stack" << endl;
-		return 0;
-	}
-	Nodetrans* n = CreateNodetrans(data);
-	if (isEmptyTransaction(*s)) {
-		s->top = n;
-	}
-	else {
-		n->next = s->top;
-		s->top = n;
-	}
-	return 1;
+bool isFull(const stack& s) {
+    Nodetrans* n = new (nothrow) Nodetrans(transaction{});
+    if (!n) return true;
+    delete n;
+    return false;
 }
+
+int stackSize(const stack& s) {
+    int size = 0;
+    Nodetrans* n = s.top;
+    while (n) {
+        size++;
+        n = n->next;
+    }
+    return size;
+}
+
+void displaystack(const stack& s) {
+    if (isEmptyTransaction(s)) { cout << "No transactions in stack.\n"; return; }
+    Nodetrans* n = s.top;
+    while (n) {
+        cout << "#" << n->data.ID << " | " << n->data.TransType
+            << " | " << n->data.Amount << " TND | " << n->data.TransDate.stringDate() << "\n";
+        n = n->next;
+    }
+}
+
+int push(stack* s, const transaction& data) {
+    if (!s) return 0;
+    if (isFull(*s)) { cout << "Cannot push: out of memory\n"; return 0; }
+    Nodetrans* n = CreateNodetrans(data);
+    if (!n) return 0;
+    n->next = s->top;
+    s->top = n;
+    return 1;
+}
+
 void pop(stack* s) {
-	if (isEmptyTransaction(*s))return;
-	else {
-		Nodetrans* temp = s->top;
-		transaction e = temp->data;
-		s->top = temp->next;
-		destroyNode(temp);
-	}
+    if (!s || isEmptyTransaction(*s)) return;
+    Nodetrans* temp = s->top;
+    s->top = temp->next;
+    destroyTransNode(temp);
 }
+
 transaction peek(const stack& s) {
-	if (isEmptyTransaction(s))return transaction{};
-	else {
-		return s.top->data;
-	}
+    if (isEmptyTransaction(s)) return transaction{};
+    return s.top->data;
 }
 
 stack* copyStack(const stack& s) {
-	stack* s1 = createStack();
-	if (isEmptyTransaction(s)) return s1;
-	Nodetrans* curr = s.top;
-	Nodetrans* newNode = s1->top;
-	Nodetrans* lastNew = nullptr;
-	while (curr) {
-		newNode = CreateNodetrans(curr->data);
-		if (curr = s.top) {
-			s1->top = newNode;
-			lastNew = newNode = nullptr;
-		}
-		else {
-			lastNew->next = newNode;
-			lastNew = newNode;
-		}
-		curr = curr->next;
-	}
-	return s1;
+    // Copy preserving order: use temporary array of transactions
+    int n = stackSize(s);
+    transaction* arr = new transaction[n];
+    Nodetrans* curr = s.top;
+    int i = 0;
+    while (curr) { arr[i++] = curr->data; curr = curr->next; }
+
+    stack* copy = createStack();
+    // push in reverse to keep same top-to-bottom order
+    for (int j = n - 1; j >= 0; --j) push(copy, arr[j]);
+
+    delete[] arr;
+    return copy;
 }
 
 bool compareStack(const stack& s1, const stack& s2) {
-	if (stackSize(s1) != stackSize(s2)) return false;
-	Nodetrans* curr1 = s1.top;
-	Nodetrans* curr2 = s2.top;
-	while (curr1 != nullptr) {
-		if (curr1->data.ID != curr2->data.ID) {
-			return false;
-		}
-		curr1 = curr1->next;
-		curr2 = curr2->next;
-	}
-	return true;
+    Nodetrans* c1 = s1.top;
+    Nodetrans* c2 = s2.top;
+    while (c1 && c2) {
+        if (c1->data.ID != c2->data.ID) return false;
+        c1 = c1->next; c2 = c2->next;
+    }
+    return c1 == nullptr && c2 == nullptr;
 }
