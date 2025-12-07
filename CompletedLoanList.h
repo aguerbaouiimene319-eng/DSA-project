@@ -1,14 +1,19 @@
 #ifndef COMPLETEDLOANLIST_H
 #define COMPLETEDLOANLIST_H
-#include"Loan.h"
-#include<iostream>
+
+#include "Loan.h"
+#include <iostream>
 using namespace std;
 
 struct NodeCompLoan {
-	loan data;
-	NodeCompLoan* next;
+    loan data;
+    NodeCompLoan* next;
+    NodeCompLoan(const loan& l) : data(l), next(nullptr) {}
 };
+
 struct CompList {
-	NodeCompLoan* head;
+    NodeCompLoan* head;
+    CompList() : head(nullptr) {}
 };
+
 #endif

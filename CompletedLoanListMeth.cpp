@@ -1,51 +1,55 @@
+#include "CompletedLoanListMeth.h"
+#include <new>
+#include <iostream>
+using namespace std;
 
-#include"CompletedLoanListMeth.h"
-#include<new>
-#include<iostream>
+NodeCompLoan* createLoanNode(const loan& value) {
+    NodeCompLoan* n = new (nothrow) NodeCompLoan(value);
+    if (!n) return nullptr;
+    return n;
+}
 
-NodeCompLoan* createLoanNode(loan value) {
-	NodeCompLoan* n = new (nothrow) NodeCompLoan {value,nullptr};
-	if (!n)return nullptr;
-	return n;
+void destroyLoanNode(NodeCompLoan* n) {
+    delete n;
 }
-void destroyLoanNode(NodeCompLoan*n) {
-	delete n;
-}
+
 CompList* createCompList() {
-	CompList* L = new (nothrow) CompList {nullptr};
-	return L;
-}
-void destroyList(CompList* s) {
-	NodeCompLoan* curr = s->head;
-	while (curr) {
-		NodeCompLoan* temp = curr->next;
-		destroyLoanNode(curr);
-		curr = temp;
-	}
-	delete s;
+    CompList* L = new (nothrow) CompList();
+    return L;
 }
 
-void addCompLoan(CompList* L, loan l) {
-	NodeCompLoan* newNode = createLoanNode(l);
-	newNode->data = l;
-	newNode->next = L->head;
-	L->head = newNode;
+void destroyCompList(CompList* s) {
+    if (!s) return;
+    NodeCompLoan* curr = s->head;
+    while (curr) {
+        NodeCompLoan* temp = curr->next;
+        destroyLoanNode(curr);
+        curr = temp;
+    }
+    delete s;
 }
 
-void displayCompList(const CompList& L){
-	NodeCompLoan* curr = L.head;
-	if (curr == nullptr) {
-		cout << "no completed loans in archive" << endl;
-		return;
-	}
-	cout << "archived completed loans " << endl;
-	while (curr) {
-		cout << "ID:" << curr->data.ID
-			<< ", type: " << curr->data.type
-			<< " amount: " << curr->data.amount << " TND "
-			<< "end date: " << curr->data.EndDate.day << curr->data.EndDate.month << curr->data.EndDate.year << endl;
-		curr = curr->next;
-	}
-	cout << "___________________________________" << endl;
+void addCompLoan(CompList* L, const loan& l) {
+    if (!L) return;
+    NodeCompLoan* newNode = createLoanNode(l);
+    if (!newNode) return;
+    newNode->next = L->head;
+    L->head = newNode;
 }
-// need the singly linked list to be sent all of it
+
+void displayCompList(const CompList& L) {
+    NodeCompLoan* curr = L.head;
+    if (!curr) {
+        cout << "No completed loans in archive\n";
+        return;
+    }
+    cout << "Archived completed loans:\n";
+    while (curr) {
+        cout << "ID:" << curr->data.ID
+            << ", Type: " << curr->data.type
+            << ", Amount: " << curr->data.amount << " TND"
+            << ", End: " << curr->data.EndDate.stringDate() << "\n";
+        curr = curr->next;
+    }
+    cout << "___________________________________\n";
+}

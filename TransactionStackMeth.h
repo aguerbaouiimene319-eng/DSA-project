@@ -1,23 +1,25 @@
 #ifndef TRANSACTIONSTACKMETH_H
 #define TRANSACTIONSTACKMETH_H
 
-#include"TransactionStack.h"
-#include<iostream>
+#include "Transaction.h"
+#include "TransactionStack.h"
+#include <iostream>
 using namespace std;
 
-//stack using singly linked list 
+// stack using singly linked list
+Nodetrans* CreateNodetrans(const transaction& data);
+void destroyTransNode(Nodetrans* n);
 
-Nodetrans* CreateNodetrans(transaction data);
-void destroyNode(Nodetrans* n);
 stack* createStack();
 void destroyStack(stack* s);
 
 bool isEmptyTransaction(const stack& s);
-bool isFull(const stack& s);
+bool isFull(const stack& s); // memory probe
+
 void displaystack(const stack& s);
 int stackSize(const stack& s);
 
-int push(stack* s, transaction data);
+int push(stack* s, const transaction& data);
 void pop(stack* s);
 transaction peek(const stack& s);
 
