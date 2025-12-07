@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Interface</title>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+    body {
+        margin: 0;
+        font-family: "Poppins", sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: url('https://images.unsplash.com/photo-1561414927-6d86591d0c4f?auto=format&fit=crop&w=1740&q=80');
+        background-size: cover;
+        background-position: center;
+        color: white;
+    }
+
+    .container {
+        background: rgba(0, 0, 0, 0.55);
+        padding: 50px;
+        border-radius: 25px;
+        width: 380px;
+        text-align: center;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 10px 35px rgba(0,0,0,0.6);
+        animation: fadeIn 1.2s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(25px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .title {
+        font-size: 26px;
+        margin-bottom: 30px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .btn {
+        width: 100%;
+        margin: 10px 0;
+        padding: 15px;
+        border: none;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 10px;
+        transition: 0.3s;
+        font-weight: bold;
+    }
+
+    .deposit-btn { background-color: #1abc9c; }
+    .withdraw-btn { background-color: #3498db; }
+    .loan-btn { background-color: #9b59b6; }
+    .back-btn { background-color: #e67e22; }
+
+    .btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+    }
+</style>
+</head>
+
+<body>
+<div class="container">
+    <div class="title">Customer Interface</div>
+
+    <button class="btn deposit-btn" onclick="alert('Deposit page coming soon')">
+        Deposit
+    </button>
+
+    <button class="btn withdraw-btn" onclick="alert('Withdraw page coming soon')">
+        Withdraw
+    </button>
+
+    <button class="btn loan-btn" onclick="alert('Loan Request page coming soon')">
+        Request Loan
+    </button>
+
+    <button class="btn back-btn" onclick="window.location.href='index.html'">
+        Back to Main Menu
+    </button>
+</div>
+</body>
+</html>

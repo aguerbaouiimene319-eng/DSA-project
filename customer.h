@@ -1,8 +1,9 @@
 #ifndef CUSTOMER_H
 #define CUSTOMER_H
-#include<string>
-#include"DoublyLinkedList.h"
-#include"loan.h";
+
+#include"Date.h"
+#include"LoanListMeth.h"
+#include"TransactionStackMeth.h"
 using namespace std;
 
 struct customer {
@@ -12,9 +13,11 @@ struct customer {
 	int IBAN;
 	int Branch;
 	string name;
-	string OpDate;
-	string statute;
+	date OpDate;
+	string status;//active,inactive,closed
 	float balance;
-	LoanList loan;
+	LoanList loans;
+	stack transList;
+
 };
 #endif

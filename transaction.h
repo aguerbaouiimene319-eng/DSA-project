@@ -1,14 +1,19 @@
-
 #ifndef TRANSACTION_H
 #define TRANSACTION_H
+
+#include<iostream>
 #include<string>
+#include"Date.h"
+
 using namespace std;
 
 struct transaction {
 	int ID;
 	int AccountNum;
-	string TransType;
-	float Amount;
-	string TransDate;
+	string TransType;//deposit or withdrawl
+	double Amount;
+	date TransDate;
 };
-#endif
+//StackContigMeth<transaction>dailyTransactions;
+
+#endif 
